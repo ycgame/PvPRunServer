@@ -10,7 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20161025113308) do
+ActiveRecord::Schema.define(version: 20161029152222) do
+
+  create_table "ais", force: :cascade do |t|
+    t.float    "min_interval"
+    t.float    "max_interval"
+    t.float    "correct_rate"
+    t.integer  "user_id"
+    t.datetime "created_at",   null: false
+    t.datetime "updated_at",   null: false
+  end
 
   create_table "matches", force: :cascade do |t|
     t.integer  "user_id"
@@ -22,6 +31,7 @@ ActiveRecord::Schema.define(version: 20161025113308) do
   create_table "users", force: :cascade do |t|
     t.string   "name"
     t.string   "token"
+    t.integer  "rate"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
