@@ -11,7 +11,7 @@ class AisController < ApplicationController
     uri  = URI.parse("http://localhost:6767/request")
     http = Net::HTTP.new(uri.host, uri.port)
     req  = Net::HTTP::Post.new(uri.path)
-
+    
     req.set_form_data({
                         token: ENV['AI_TOKEN'],
                         data: ai.to_json(include: :user)

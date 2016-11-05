@@ -4,6 +4,7 @@ class CreateUsers < ActiveRecord::Migration[5.0]
       t.string :name
       t.string :token
       t.integer :rate
+      t.float :time_attack
 
       t.timestamps
     end
