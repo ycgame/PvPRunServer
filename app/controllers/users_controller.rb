@@ -7,7 +7,7 @@ class UsersController < ApplicationController
   end
 
   def create
-    user = User.create(name: user_params[:name], token: SecureRandom.hex(16))
+    user = User.create(name: user_params[:name], token: SecureRandom.hex(16), rate: 0, time_attack: nil)
     render :json => user
   end
 

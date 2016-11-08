@@ -26,7 +26,7 @@ class MatchChannel < ApplicationCable::Channel
 
     # 認証失敗
     unless token.present? && _token == token
-      ActionCable.server.broadcast user_channel, {match: false}
+      ActionCable.server.broadcast user_channel, {type: 'auth', match: false}
       return
     end
 
@@ -41,11 +41,11 @@ class MatchChannel < ApplicationCable::Channel
     if m.present?
 
       # ステージの作成
-      stage = Array.new(5) { |i| rand(4) }
+      stage = Array.new(20) { |i| rand(4) }
       
       # ゲーム情報
       game = {
-        match: true,
+        type: 'match',
         stage: stage
       }
 
@@ -59,15 +59,15 @@ class MatchChannel < ApplicationCable::Channel
       @redis.set('matched_'+m[:session_id], self.session_id)
       @redis.set('stage_'+m[:session_id], stage.join(','))
       @redis.set('step_'+m[:session_id], 0)
-
+      
       # マッチしたことを両者に伝える
       game[:user] = user
       game[:matched] = m.user
-      ActionCable.server.broadcast user_channel_id(m[:session_id]), game
-
+      ActionCable.server.broadcast user_channel, game
+      
       game[:user]= m.user
       game[:matched] = user
-      ActionCable.server.broadcast user_channel, game
+      ActionCable.server.broadcast user_channel_id(m[:session_id]), game
 
       # 既存のマッチ情報を削除
       m.destroy
@@ -99,6 +99,7 @@ class MatchChannel < ApplicationCable::Channel
       logger.debug('Correct step')
       # 相手にデータを送信
       ActionCable.server.broadcast user_channel_id(matched), {
+        type: 'step',
         step: step,
         step_count: step_count
       }
@@ -141,16 +142,24 @@ class MatchChannel < ApplicationCable::Channel
     # 結果の送信
 
     ActionCable.server.broadcast user_channel, {
+      type: 'fin',
       fin: win,
       user: user,
       matched: muser
     }
 
     ActionCable.server.broadcast user_channel_id(matched), {
+      type: 'fin',
       fin: !win,
       user: muser,
       matched: user
     }
+  end
+
+  def cancel
+    # 既存のマッチを削除
+    user = User.find_by_id(@redis.get(self.session_id))
+    user.match.destroy if user.present? && user.match.present?
   end
 
   def user_channel
