@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   resources :users, only: [:create]
   get  'users/:id/ranking' => 'users#ranking'
   post 'users/:id/time_attack' => 'users#time_attack'
+  post 'users/:id/name' => 'users#update_name'
 
   post '/ais' => 'ais#req'
 

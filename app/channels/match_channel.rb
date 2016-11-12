@@ -25,11 +25,11 @@ class MatchChannel < ApplicationCable::Channel
     _token = user[:token] unless user.nil?
 
     # 認証失敗
-    unless token.present? && _token == token
-      ActionCable.server.broadcast user_channel, {type: 'auth', match: false}
-      return
-    end
-
+    return ActionCable.server.broadcast user_channel, {
+      type: 'auth', 
+      match: false
+    } unless token.present? && _token == token
+    
     @redis.set(self.session_id, id)
 
     # 既存のマッチが有れば削除
@@ -82,10 +82,7 @@ class MatchChannel < ApplicationCable::Channel
   def step data
 
     # すでに終了しているか、不正なゲーム
-    unless @redis.exists('matched_'+self.session_id)
-      logger.debug('Invalid game')
-      return
-    end
+    return logger.debug('Invalid game') unless @redis.exists('matched_'+self.session_id)
 
     matched = @redis.get('matched_'+self.session_id)
     stage = @redis.get('stage_'+self.session_id).split(',')
@@ -93,25 +90,18 @@ class MatchChannel < ApplicationCable::Channel
 
     step = data['step'].to_i
     correct_step = stage[step_count].to_i
-    
-    if correct_step == step
-      # 正しいステップ
-      logger.debug('Correct step')
-      # 相手にデータを送信
-      ActionCable.server.broadcast user_channel_id(matched), {
-        type: 'step',
-        step: step,
-        step_count: step_count
-      }
-      # ゴール
-      if step_count == stage.length-1
-        fin true, matched
-      end
-    else
-      # 間違ったステップ
-      logger.debug('Wrong step')
-      fin false, matched
-    end
+
+    # 相手にデータを送信
+    ActionCable.server.broadcast user_channel_id(matched), {
+      type: 'step',
+      step: step,
+      step_count: step_count
+    }
+
+    # ゴール    
+    fin true, matched, 'goal' if correct_step == step && step_count == stage.length-1
+    # 間違ったステップ
+    fin false, matched, 'miss' if correct_step != step
 
     # 一歩すすめる
     @redis.set('step_'+self.session_id, step_count+1)
@@ -120,7 +110,7 @@ class MatchChannel < ApplicationCable::Channel
   end
 
   # ゲーム終了
-  def fin win, matched
+  def fin win, matched, msg
 
     # レーティングの変更
     user  = User.find_by_id(@redis.get('id_'+self.session_id).to_i)
@@ -144,6 +134,7 @@ class MatchChannel < ApplicationCable::Channel
     ActionCable.server.broadcast user_channel, {
       type: 'fin',
       fin: win,
+      msg: msg,
       user: user,
       matched: muser
     }
@@ -151,6 +142,7 @@ class MatchChannel < ApplicationCable::Channel
     ActionCable.server.broadcast user_channel_id(matched), {
       type: 'fin',
       fin: !win,
+      msg: msg,
       user: muser,
       matched: user
     }

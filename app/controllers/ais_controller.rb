@@ -8,6 +8,8 @@ class AisController < ApplicationController
 
     ai = Ai.offset(rand(Ai.count)).first
 
+    logger.debug("Selected AI: " + ai[:min_interval].to_s + " " + ai[:max_interval].to_s + " " + ai[:correct_rate].to_s)
+
     uri  = URI.parse("http://localhost:6767/request")
     http = Net::HTTP.new(uri.host, uri.port)
     req  = Net::HTTP::Post.new(uri.path)

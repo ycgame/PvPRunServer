@@ -7,17 +7,30 @@ class UsersController < ApplicationController
   end
 
   def create
-    user = User.create(name: user_params[:name], token: SecureRandom.hex(16), rate: 0, time_attack: nil)
-    render :json => user
+    return head 403 if user_params[:token].nil?
+    return head 403 if user_params[:token] != ENV['AI_TOKEN']
+
+    user = User.create(name: 'Guest' + User.last.id.to_s,
+                       token: SecureRandom.hex(16), 
+                       rate: 0, 
+                       time_attack: nil) unless User.last.nil?
+
+    return render :json => user unless user.nil?
+    return head 200
+  end
+
+  def update_name
+    @user.update(name: user_params[:name])
+    return render :json => @user
   end
 
   def ranking
 
-    ranking_rate = @all.order('rate DESC')
+    ranking_rate = @all.where.not('rate = ?', 'null').order('rate DESC')
     ranking_rate_top10 = ranking_rate.limit(10)
     ranking_rate_user = ranking_rate.to_a.index(@user)
     
-    ranking_time_attack = @all.order('time_attack ASC')
+    ranking_time_attack = @all.where.not('time_attack = ?', 'null').order('time_attack ASC')
     ranking_time_attack_top10 = ranking_time_attack.limit(10)
     ranking_time_attack_user = ranking_time_attack.to_a.index(@user)
     
